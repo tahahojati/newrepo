@@ -3,6 +3,8 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <linux_parser.h>
+#include <ctime>
 
 #include "process.h"
 #include "processor.h"
@@ -13,26 +15,51 @@ using std::size_t;
 using std::string;
 using std::vector;
 
-// TODO: Return the system's CPU
-Processor& System::Cpu() { return cpu_; }
+const Processor& System::Cpu() const { return cpu_; }
 
-// TODO: Return a container composed of the system's processes
-vector<Process>& System::Processes() { return processes_; }
+const vector<Process>& System::Processes() const { return processes_; }
 
-// TODO: Return the system's kernel identifier (string)
-std::string System::Kernel() { return string(); }
+std::string System::Kernel() const { return LinuxParser::Kernel(); }
 
-// TODO: Return the system's memory utilization
-float System::MemoryUtilization() { return 0.0; }
+float System::MemoryUtilization() const { return LinuxParser::MemoryUtilization(); }
 
-// TODO: Return the operating system name
-std::string System::OperatingSystem() { return string(); }
+clock_t System::time() const {
+    return clock();
+}
 
-// TODO: Return the number of processes actively running on the system
-int System::RunningProcesses() { return 0; }
+std::string System::OperatingSystem() {
+    if(_os == "") {
+        _os = LinuxParser::OperatingSystem();
+    }
+    return _os;
+}
 
-// TODO: Return the total number of processes on the system
-int System::TotalProcesses() { return 0; }
+void System::RefreshProcData() {
+    LinuxParser::RefreshProcData();
+    vector<int> pids = LinuxParser::Pids();
+    processes_.clear();
+    for(int i: pids) {
+        Process p(i, this);
+        try {
+        p.ReadInfo();
 
-// TODO: Return the number of seconds since the system started running
-long int System::UpTime() { return 0; }
+        } catch(...) {
+            //do nothing
+        }
+        processes_.push_back(p);
+    }
+}
+
+int System::RunningProcesses() const{ return LinuxParser::RunningProcesses(); }
+
+int System::TotalProcesses() const{ return LinuxParser::TotalProcesses(); }
+
+const std::unordered_map<int, string>& System::UidMap() const {
+    return _uid_map;
+}
+
+System::System() {
+    _uid_map = LinuxParser::UidMap();
+}
+
+long int System::UpTime() const { return LinuxParser::UpTime(); }

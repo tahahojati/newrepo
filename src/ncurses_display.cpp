@@ -30,6 +30,7 @@ std::string NCursesDisplay::ProgressBar(float percent) {
 
 void NCursesDisplay::DisplaySystem(System& system, WINDOW* window) {
   int row{0};
+  system.RefreshProcData();
   mvwprintw(window, ++row, 2, ("OS: " + system.OperatingSystem()).c_str());
   mvwprintw(window, ++row, 2, ("Kernel: " + system.Kernel()).c_str());
   mvwprintw(window, ++row, 2, "CPU: ");
@@ -52,7 +53,7 @@ void NCursesDisplay::DisplaySystem(System& system, WINDOW* window) {
   wrefresh(window);
 }
 
-void NCursesDisplay::DisplayProcesses(std::vector<Process>& processes,
+void NCursesDisplay::DisplayProcesses(const std::vector<Process>& processes,
                                       WINDOW* window, int n) {
   int row{0};
   int const pid_column{2};
@@ -69,7 +70,7 @@ void NCursesDisplay::DisplayProcesses(std::vector<Process>& processes,
   mvwprintw(window, row, time_column, "TIME+");
   mvwprintw(window, row, command_column, "COMMAND");
   wattroff(window, COLOR_PAIR(2));
-  for (int i = 0; i < n; ++i) {
+  for (int i = 0; i < n && i < processes.size(); ++i) {
     mvwprintw(window, ++row, pid_column, to_string(processes[i].Pid()).c_str());
     mvwprintw(window, row, user_column, processes[i].User().c_str());
     float cpu = processes[i].CpuUtilization() * 100;
@@ -78,7 +79,7 @@ void NCursesDisplay::DisplayProcesses(std::vector<Process>& processes,
     mvwprintw(window, row, time_column,
               Format::ElapsedTime(processes[i].UpTime()).c_str());
     mvwprintw(window, row, command_column,
-              processes[i].Command().substr(0, window->_maxx - 46).c_str());
+              processes[i].Command().substr(0, getmaxx(window) - 46).c_str());
   }
 }
 
@@ -91,7 +92,7 @@ void NCursesDisplay::Display(System& system, int n) {
   int x_max{getmaxx(stdscr)};
   WINDOW* system_window = newwin(9, x_max - 1, 0, 0);
   WINDOW* process_window =
-      newwin(3 + n, x_max - 1, system_window->_maxy + 1, 0);
+      newwin(3 + n, x_max - 1, getmaxy(system_window) + 1, 0);
 
   while (1) {
     init_pair(1, COLOR_BLUE, COLOR_BLACK);
